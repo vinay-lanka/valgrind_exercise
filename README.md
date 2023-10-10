@@ -36,5 +36,19 @@ The valgrind output for both cases (before and after fixing the bugs) are presen
 
 #### What happens when the executable is linked statically?  Does Valgrind still detect those same bugs?
 
+When the executable is linked statically, Valgrind cannot detect all the bugs and behaves erratically, especially with memory checking and memory leaks.
+
+When we link our executable statically via cmake, we observe a lot more conditional jump errors which do not belong to our program.
+
+Also the memory leak error is no longer visible with a `All heap blocks were freed -- no leaks are possible` statement, which is fishy as the `total heap usage: 0 allocs, 0 frees, 0 bytes allocated` statement shows that there's no allocation when there clearly is memory allocated in the application.
 
 #### Why or why not.
+
+With the conditional jump based on uninitialised values, we see that most of these errors come from methods we cannot recognise `(libc_setup_tls, libc_init_first etc..)`.
+
+The reason for this is not an issue with Valgrind but with the libraries linked in the static executable, a lot of which is not the program code. 
+A lot of the libraries, including glibc are not clean according to Valgrind. If we link dynamically, valgrind can suppress a lot of these errors but when we link statically, valgrind cannot suppress them because of the bundled nature of static linkage.
+A method to circumvent this is to write new suppressions or to link dynamically.
+
+The second issue with the undetected memory leaks is due to the nature of how valgrind functions. 
+Valgrind can only work if they replace certain functions, like `malloc, new, delete` with their own versions. By default, statically linked malloc functions are not replaced. 
